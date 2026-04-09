@@ -3,17 +3,14 @@ import { cn } from "@/lib/utils";
 export function Card({
   children,
   className,
+  style,
 }: {
   children: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
 }) {
   return (
-    <div
-      className={cn(
-        "bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-[16px] p-5",
-        className
-      )}
-    >
+    <div className={cn("az-card", className)} style={style}>
       {children}
     </div>
   );

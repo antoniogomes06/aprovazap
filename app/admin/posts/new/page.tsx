@@ -12,16 +12,11 @@ export default function NewPostPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    date: "",
-    theme: "",
-    description: "",
-    hashtags: "",
-    media_url: "",
-    docs_url: "",
+    date: "", theme: "", description: "", hashtags: "", media_url: "", docs_url: "",
   });
 
-  function set(field: string, value: string) {
-    setForm((f) => ({ ...f, [field]: value }));
+  function set(k: string, v: string) {
+    setForm((f) => ({ ...f, [k]: v }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -33,14 +28,21 @@ export default function NewPostPage() {
   }
 
   return (
-    <div className="max-w-lg space-y-6">
+    <div className="max-w-lg space-y-5 fade-in">
       <div className="flex items-center gap-3">
         <Link href="/admin/posts">
-          <button className="w-9 h-9 rounded-full flex items-center justify-center bg-[var(--bg-tertiary)] border border-[var(--border-color)] hover:border-[#6366F1]/50 transition-all">
-            <ArrowLeft className="w-4 h-4 text-[var(--text-secondary)]" />
+          <button className="az-icon-btn">
+            <ArrowLeft className="w-4 h-4" />
           </button>
         </Link>
-        <h1 className="text-xl font-bold text-[var(--text-primary)]">Novo post</h1>
+        <div>
+          <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+            Novo post
+          </h1>
+          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+            Preencha os dados do conteúdo
+          </p>
+        </div>
       </div>
 
       <Card>
@@ -63,7 +65,7 @@ export default function NewPostPage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-[var(--text-secondary)]">
+            <label className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
               Descritivo
             </label>
             <textarea
@@ -71,7 +73,8 @@ export default function NewPostPage() {
               placeholder="Texto do post..."
               value={form.description}
               onChange={(e) => set("description", e.target.value)}
-              className="px-4 py-3 rounded-[10px] bg-[var(--bg-tertiary)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[#6366F1] focus:ring-2 focus:ring-[#6366F1]/20 transition-all resize-none"
+              className="az-input"
+              style={{ height: "auto", paddingTop: 12, paddingBottom: 12 }}
               required
             />
           </div>
@@ -82,14 +85,12 @@ export default function NewPostPage() {
             value={form.hashtags}
             onChange={(e) => set("hashtags", e.target.value)}
           />
-
           <Input
             label="Link das mídias"
             placeholder="https://drive.google.com/..."
             value={form.media_url}
             onChange={(e) => set("media_url", e.target.value)}
           />
-
           <Input
             label="Link dos descritivos"
             placeholder="https://docs.google.com/..."
@@ -97,9 +98,11 @@ export default function NewPostPage() {
             onChange={(e) => set("docs_url", e.target.value)}
           />
 
-          <Button type="submit" size="lg" loading={loading}>
-            Salvar post
-          </Button>
+          <div className="pt-2">
+            <Button type="submit" size="lg" loading={loading}>
+              Salvar post
+            </Button>
+          </div>
         </form>
       </Card>
     </div>

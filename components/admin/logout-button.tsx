@@ -15,8 +15,17 @@ export function LogoutButton() {
   return (
     <button
       onClick={handleLogout}
-      className="w-9 h-9 rounded-full flex items-center justify-center bg-[var(--bg-tertiary)] border border-[var(--border-color)] hover:border-red-500/40 hover:text-red-400 text-[var(--text-secondary)] transition-all"
       title="Sair"
+      className="az-icon-btn"
+      style={{ color: "var(--text-secondary)" }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--danger)";
+        (e.currentTarget as HTMLButtonElement).style.color = "var(--danger)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-color)";
+        (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)";
+      }}
     >
       <LogOut className="w-4 h-4" />
     </button>

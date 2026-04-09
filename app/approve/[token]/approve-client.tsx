@@ -1,21 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Post } from "@/types";
 import { formatDate } from "@/lib/utils";
-import {
-  Check,
-  X,
-  ExternalLink,
-  Hash,
-  Calendar,
-  ChevronDown,
-  ChevronUp,
-  Zap,
-} from "lucide-react";
+import { Check, X, ExternalLink, Hash, Calendar, ChevronDown, ChevronUp, Zap } from "lucide-react";
 
 type ApprovalState = "idle" | "awaiting_code" | "confirmed";
 
@@ -26,7 +16,7 @@ interface Props {
   clientName: string;
 }
 
-export function ApproveClient({ token, clientId, posts, clientName }: Props) {
+export function ApproveClient({ clientId, posts, clientName }: Props) {
   const [decisions, setDecisions] = useState<Record<string, "approved" | "rejected">>({});
   const [expanded, setExpanded] = useState<string | null>(posts[0]?.id ?? null);
   const [state, setState] = useState<ApprovalState>("idle");
@@ -36,11 +26,12 @@ export function ApproveClient({ token, clientId, posts, clientName }: Props) {
   const [error, setError] = useState("");
 
   const allDecided = posts.every((p) => decisions[p.id]);
+  const decidedCount = Object.keys(decisions).length;
 
   function decide(postId: string, decision: "approved" | "rejected") {
     setDecisions((d) => ({ ...d, [postId]: decision }));
-    const nextUndecided = posts.find((p) => !decisions[p.id] && p.id !== postId);
-    if (nextUndecided) setExpanded(nextUndecided.id);
+    const next = posts.find((p) => !decisions[p.id] && p.id !== postId);
+    if (next) setExpanded(next.id);
   }
 
   async function handleSendCode() {
@@ -52,12 +43,7 @@ export function ApproveClient({ token, clientId, posts, clientName }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ client_id: clientId }),
       });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "Erro ao enviar código");
-      }
-
+      if (!res.ok) throw new Error((await res.json()).error);
       setState("awaiting_code");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Erro ao enviar código");
@@ -67,36 +53,20 @@ export function ApproveClient({ token, clientId, posts, clientName }: Props) {
   }
 
   async function handleVerifyCode() {
-    if (code.length !== 6) {
-      setCodeError("Digite os 6 dígitos");
-      return;
-    }
-
+    if (code.length !== 6) { setCodeError("Digite os 6 dígitos"); return; }
     setLoading(true);
     setCodeError("");
-    setError("");
-
     try {
-      const decisionsArr = Object.entries(decisions).map(([post_id, status]) => ({
-        post_id,
-        status,
-      }));
-
       const res = await fetch("/api/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           client_id: clientId,
           code,
-          decisions: decisionsArr,
+          decisions: Object.entries(decisions).map(([post_id, status]) => ({ post_id, status })),
         }),
       });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "Código inválido");
-      }
-
+      if (!res.ok) throw new Error((await res.json()).error);
       setState("confirmed");
     } catch (e: unknown) {
       setCodeError(e instanceof Error ? e.message : "Código inválido ou expirado");
@@ -105,17 +75,24 @@ export function ApproveClient({ token, clientId, posts, clientName }: Props) {
     }
   }
 
+  /* ── Confirmado ── */
   if (state === "confirmed") {
     return (
-      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center px-4">
-        <div className="text-center max-w-sm">
-          <div className="w-16 h-16 rounded-full bg-green-500/15 flex items-center justify-center mx-auto mb-4">
-            <Check className="w-8 h-8 text-green-400" />
+      <div
+        className="min-h-screen flex items-center justify-center px-4"
+        style={{ backgroundColor: "var(--bg-primary)" }}
+      >
+        <div className="text-center max-w-sm fade-in">
+          <div
+            className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5"
+            style={{ backgroundColor: "var(--success-bg)", border: "1px solid var(--success-border)" }}
+          >
+            <Check className="w-10 h-10" style={{ color: "var(--success)" }} />
           </div>
-          <h1 className="text-xl font-bold text-[var(--text-primary)]">
+          <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
             Aprovação confirmada!
           </h1>
-          <p className="text-sm text-[var(--text-secondary)] mt-2">
+          <p className="text-sm mt-2" style={{ color: "var(--text-secondary)" }}>
             Suas escolhas foram registradas com sucesso. Obrigado!
           </p>
         </div>
@@ -124,15 +101,18 @@ export function ApproveClient({ token, clientId, posts, clientName }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
+    <div className="min-h-screen" style={{ backgroundColor: "var(--bg-primary)" }}>
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-[var(--border-color)] bg-[var(--bg-secondary)]/80 backdrop-blur-md">
+      <header className="app-header">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-[#6366F1] rounded-[8px] flex items-center justify-center">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: "var(--accent)" }}
+            >
               <Zap className="w-4 h-4 text-white" fill="white" />
             </div>
-            <span className="font-bold text-[15px] text-[var(--text-primary)]">
+            <span className="font-bold text-[15px]" style={{ color: "var(--text-primary)" }}>
               AprovaZap
             </span>
           </div>
@@ -140,13 +120,13 @@ export function ApproveClient({ token, clientId, posts, clientName }: Props) {
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
+      <div className="max-w-lg mx-auto px-4 py-6 space-y-4 pb-10">
         {/* Welcome */}
-        <div className="mb-2">
-          <h1 className="text-xl font-bold text-[var(--text-primary)]">
+        <div>
+          <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
             Olá, {clientName}!
           </h1>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">
+          <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
             Revise e aprove os conteúdos abaixo.
           </p>
         </div>
@@ -154,56 +134,70 @@ export function ApproveClient({ token, clientId, posts, clientName }: Props) {
         {/* Posts */}
         {posts.map((post) => {
           const decision = decisions[post.id];
-          const isExpanded = expanded === post.id;
+          const isOpen = expanded === post.id;
+          const borderColor = decision === "approved"
+            ? "var(--success-border)"
+            : decision === "rejected"
+            ? "var(--danger-border)"
+            : "var(--border-color)";
+          const bgColor = decision === "approved"
+            ? "var(--success-bg)"
+            : decision === "rejected"
+            ? "var(--danger-bg)"
+            : "var(--bg-secondary)";
 
           return (
             <div
               key={post.id}
-              className={`rounded-[16px] border transition-all overflow-hidden ${
-                decision === "approved"
-                  ? "border-green-500/30 bg-green-500/5"
-                  : decision === "rejected"
-                  ? "border-red-500/30 bg-red-500/5"
-                  : "border-[var(--border-color)] bg-[var(--bg-secondary)]"
-              }`}
+              className="rounded-2xl overflow-hidden transition-all duration-200"
+              style={{ border: `1px solid ${borderColor}`, backgroundColor: bgColor }}
             >
+              {/* Trigger */}
               <button
-                onClick={() => setExpanded(isExpanded ? null : post.id)}
+                onClick={() => setExpanded(isOpen ? null : post.id)}
                 className="w-full flex items-center justify-between p-4 text-left"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-[10px] bg-[var(--bg-tertiary)] flex items-center justify-center flex-shrink-0">
-                    <Calendar className="w-4 h-4 text-[#818CF8]" />
+                  <div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: "rgba(99,102,241,0.12)" }}
+                  >
+                    <Calendar className="w-4 h-4" style={{ color: "var(--accent-light)" }} />
                   </div>
                   <div className="min-w-0">
-                    <p className="font-semibold text-[var(--text-primary)] text-sm truncate">
+                    <p className="font-semibold text-sm truncate" style={{ color: "var(--text-primary)" }}>
                       {post.theme}
                     </p>
-                    <p className="text-xs text-[var(--text-secondary)]">
+                    <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
                       {formatDate(post.date)}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                   {decision && <StatusBadge status={decision} />}
-                  {isExpanded ? (
-                    <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />
-                  )}
+                  {isOpen
+                    ? <ChevronUp className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
+                    : <ChevronDown className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
+                  }
                 </div>
               </button>
 
-              {isExpanded && (
-                <div className="px-4 pb-4 space-y-4 border-t border-[var(--border-color)]">
-                  <p className="text-sm text-[var(--text-primary)] leading-relaxed pt-4">
+              {/* Content */}
+              {isOpen && (
+                <div
+                  className="px-4 pb-4 space-y-4"
+                  style={{ borderTop: `1px solid ${borderColor}` }}
+                >
+                  <p className="text-sm leading-relaxed pt-4" style={{ color: "var(--text-primary)" }}>
                     {post.description}
                   </p>
 
                   {post.hashtags && (
                     <div className="flex items-start gap-2">
-                      <Hash className="w-3.5 h-3.5 text-[#818CF8] mt-0.5 flex-shrink-0" />
-                      <p className="text-xs text-[#818CF8]">{post.hashtags}</p>
+                      <Hash className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: "var(--accent-light)" }} />
+                      <p className="text-xs" style={{ color: "var(--accent-light)" }}>
+                        {post.hashtags}
+                      </p>
                     </div>
                   )}
 
@@ -213,7 +207,8 @@ export function ApproveClient({ token, clientId, posts, clientName }: Props) {
                         href={post.media_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[#818CF8] transition-colors"
+                        className="flex items-center gap-1.5 text-xs transition-colors"
+                        style={{ color: "var(--text-secondary)" }}
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                         Ver mídias
@@ -224,7 +219,8 @@ export function ApproveClient({ token, clientId, posts, clientName }: Props) {
                         href={post.docs_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[#818CF8] transition-colors"
+                        className="flex items-center gap-1.5 text-xs"
+                        style={{ color: "var(--text-secondary)" }}
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                         Ver descritivo
@@ -233,38 +229,27 @@ export function ApproveClient({ token, clientId, posts, clientName }: Props) {
                   </div>
 
                   {!decision && (
-                    <div className="grid grid-cols-2 gap-3 pt-2">
-                      <Button
-                        variant="danger"
-                        size="lg"
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                      <button
                         onClick={() => decide(post.id, "rejected")}
-                        className="gap-2"
+                        className="az-btn az-btn-danger az-btn-lg gap-2"
                       >
-                        <X className="w-4 h-4" />
-                        Rejeitar
-                      </Button>
-                      <Button
-                        variant="success"
-                        size="lg"
+                        <X className="w-4 h-4" /> Rejeitar
+                      </button>
+                      <button
                         onClick={() => decide(post.id, "approved")}
-                        className="gap-2"
+                        className="az-btn az-btn-success az-btn-lg gap-2"
                       >
-                        <Check className="w-4 h-4" />
-                        Aprovar
-                      </Button>
+                        <Check className="w-4 h-4" /> Aprovar
+                      </button>
                     </div>
                   )}
 
                   {decision && (
                     <button
-                      onClick={() =>
-                        setDecisions((d) => {
-                          const n = { ...d };
-                          delete n[post.id];
-                          return n;
-                        })
-                      }
-                      className="text-xs text-[var(--text-muted)] underline underline-offset-2"
+                      onClick={() => setDecisions((d) => { const n = { ...d }; delete n[post.id]; return n; })}
+                      className="text-xs underline underline-offset-2"
+                      style={{ color: "var(--text-muted)" }}
                     >
                       Desfazer decisão
                     </button>
@@ -275,41 +260,55 @@ export function ApproveClient({ token, clientId, posts, clientName }: Props) {
           );
         })}
 
-        {/* Progress bar */}
-        <div className="flex items-center gap-2 py-2">
-          <div className="flex-1 h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
+        {/* Progress */}
+        <div className="flex items-center gap-3">
+          <div
+            className="flex-1 h-1.5 rounded-full overflow-hidden"
+            style={{ backgroundColor: "var(--bg-tertiary)" }}
+          >
             <div
-              className="h-full bg-[#6366F1] rounded-full transition-all duration-500"
+              className="h-full rounded-full transition-all duration-500"
               style={{
-                width: `${(Object.keys(decisions).length / posts.length) * 100}%`,
+                width: `${(decidedCount / posts.length) * 100}%`,
+                backgroundColor: "var(--accent)",
               }}
             />
           </div>
-          <span className="text-xs text-[var(--text-muted)] flex-shrink-0">
-            {Object.keys(decisions).length}/{posts.length}
+          <span className="text-xs flex-shrink-0" style={{ color: "var(--text-muted)" }}>
+            {decidedCount}/{posts.length} revisados
           </span>
         </div>
 
-        {/* Error global */}
         {error && (
-          <p className="text-sm text-red-400 text-center">{error}</p>
+          <p className="text-sm text-center" style={{ color: "var(--danger)" }}>{error}</p>
         )}
 
-        {/* CTA: confirmar */}
+        {/* CTA */}
         {state === "idle" && allDecided && (
-          <Button size="lg" onClick={handleSendCode} loading={loading}>
-            Confirmar aprovações
-          </Button>
+          <button
+            onClick={handleSendCode}
+            disabled={loading}
+            className="az-btn az-btn-primary az-btn-lg"
+          >
+            {loading && <span className="spinner" />}
+            {loading ? "Enviando..." : "Confirmar aprovações"}
+          </button>
         )}
 
-        {/* Código WhatsApp */}
+        {/* Código */}
         {state === "awaiting_code" && (
-          <div className="space-y-4 p-5 rounded-[16px] bg-[var(--bg-secondary)] border border-[var(--border-color)]">
+          <div
+            className="p-5 rounded-2xl space-y-4"
+            style={{
+              backgroundColor: "var(--bg-secondary)",
+              border: "1px solid var(--border-color)",
+            }}
+          >
             <div>
-              <p className="font-semibold text-[var(--text-primary)]">
+              <p className="font-semibold" style={{ color: "var(--text-primary)" }}>
                 Digite o código
               </p>
-              <p className="text-sm text-[var(--text-secondary)] mt-1">
+              <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
                 Enviamos um código de 6 dígitos para o seu WhatsApp.
               </p>
             </div>
@@ -320,16 +319,31 @@ export function ApproveClient({ token, clientId, posts, clientName }: Props) {
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
               placeholder="000000"
-              className="w-full h-14 text-center text-2xl font-bold tracking-[0.3em] rounded-[10px] bg-[var(--bg-tertiary)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[#6366F1] focus:ring-2 focus:ring-[#6366F1]/20 transition-all"
+              className="az-input"
+              style={{
+                height: 56,
+                textAlign: "center",
+                fontSize: 24,
+                fontWeight: 700,
+                letterSpacing: "0.3em",
+              }}
             />
-            {codeError && <p className="text-xs text-red-400">{codeError}</p>}
-            <Button size="lg" onClick={handleVerifyCode} loading={loading}>
-              Verificar código
-            </Button>
+            {codeError && (
+              <p className="text-xs" style={{ color: "var(--danger)" }}>{codeError}</p>
+            )}
+            <button
+              onClick={handleVerifyCode}
+              disabled={loading}
+              className="az-btn az-btn-primary az-btn-lg"
+            >
+              {loading && <span className="spinner" />}
+              {loading ? "Verificando..." : "Verificar código"}
+            </button>
             <button
               onClick={handleSendCode}
               disabled={loading}
-              className="w-full text-xs text-[var(--text-muted)] underline underline-offset-2 disabled:opacity-40"
+              className="w-full text-xs underline underline-offset-2"
+              style={{ color: "var(--text-muted)" }}
             >
               Reenviar código
             </button>

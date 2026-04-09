@@ -1,81 +1,99 @@
 import { Card } from "@/components/ui/card";
-import { Users, FileText, CheckCircle, Clock } from "lucide-react";
+import { Users, FileText, CheckCircle, Clock, Plus } from "lucide-react";
 import Link from "next/link";
 
 const stats = [
-  { label: "Clientes", value: "0", icon: Users, href: "/admin/clients" },
-  { label: "Posts", value: "0", icon: FileText, href: "/admin/posts" },
+  { label: "Clientes",  value: "0", icon: Users,       href: "/admin/clients" },
+  { label: "Posts",     value: "0", icon: FileText,    href: "/admin/posts" },
   { label: "Aprovados", value: "0", icon: CheckCircle, href: "/admin/posts?status=approved" },
-  { label: "Pendentes", value: "0", icon: Clock, href: "/admin/posts?status=pending" },
+  { label: "Pendentes", value: "0", icon: Clock,       href: "/admin/posts?status=pending" },
+];
+
+const actions = [
+  { href: "/admin/clients/new", icon: Users,    label: "Novo cliente", desc: "Cadastrar cliente e número WhatsApp" },
+  { href: "/admin/posts/new",   icon: FileText, label: "Novo post",    desc: "Adicionar conteúdo para aprovação" },
 ];
 
 export default function AdminDashboard() {
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-6 fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Dashboard</h1>
-        <p className="text-sm text-[var(--text-secondary)] mt-1">
+        <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+          Dashboard
+        </h1>
+        <p className="text-sm mt-0.5" style={{ color: "var(--text-secondary)" }}>
           Visão geral dos seus conteúdos
         </p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Link key={stat.label} href={stat.href}>
-            <Card className="hover:border-[#6366F1]/40 transition-all cursor-pointer">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-[8px] bg-[#6366F1]/10 flex items-center justify-center">
-                  <stat.icon className="w-4 h-4 text-[#818CF8]" />
-                </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {stats.map((s) => (
+          <Link key={s.label} href={s.href}>
+            <Card className="cursor-pointer transition-all duration-150 hover:shadow-md">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center mb-3"
+                style={{ backgroundColor: "rgba(99,102,241,0.12)" }}
+              >
+                <s.icon className="w-4 h-4" style={{ color: "var(--accent-light)" }} />
               </div>
-              <div className="text-2xl font-bold text-[var(--text-primary)]">{stat.value}</div>
-              <div className="text-xs text-[var(--text-secondary)] mt-0.5">{stat.label}</div>
+              <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+                {s.value}
+              </div>
+              <div className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>
+                {s.label}
+              </div>
             </Card>
           </Link>
         ))}
       </div>
 
-      {/* Quick actions */}
+      {/* Grid bottom */}
       <div className="grid md:grid-cols-2 gap-4">
         <Card>
-          <h2 className="font-semibold text-[var(--text-primary)] mb-3">Ações rápidas</h2>
-          <div className="space-y-2">
-            <Link
-              href="/admin/clients/new"
-              className="flex items-center gap-3 p-3 rounded-[10px] hover:bg-[var(--bg-tertiary)] transition-all group"
-            >
-              <div className="w-8 h-8 rounded-[8px] bg-[#6366F1]/10 flex items-center justify-center">
-                <Users className="w-4 h-4 text-[#818CF8]" />
-              </div>
-              <div>
-                <div className="text-sm font-medium text-[var(--text-primary)]">Novo cliente</div>
-                <div className="text-xs text-[var(--text-muted)]">Cadastrar cliente e número WhatsApp</div>
-              </div>
-            </Link>
-            <Link
-              href="/admin/posts/new"
-              className="flex items-center gap-3 p-3 rounded-[10px] hover:bg-[var(--bg-tertiary)] transition-all group"
-            >
-              <div className="w-8 h-8 rounded-[8px] bg-[#6366F1]/10 flex items-center justify-center">
-                <FileText className="w-4 h-4 text-[#818CF8]" />
-              </div>
-              <div>
-                <div className="text-sm font-medium text-[var(--text-primary)]">Novo post</div>
-                <div className="text-xs text-[var(--text-muted)]">Adicionar conteúdo para aprovação</div>
-              </div>
-            </Link>
+          <h2 className="font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
+            Ações rápidas
+          </h2>
+          <div className="space-y-1">
+            {actions.map((a) => (
+              <Link key={a.href} href={a.href} className="az-hover-row flex items-center gap-3 p-3">
+                <div
+                  className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: "rgba(99,102,241,0.12)" }}
+                >
+                  <a.icon className="w-4 h-4" style={{ color: "var(--accent-light)" }} />
+                </div>
+                <div>
+                  <div className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                    {a.label}
+                  </div>
+                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    {a.desc}
+                  </div>
+                </div>
+                <Plus className="w-4 h-4 ml-auto flex-shrink-0" style={{ color: "var(--text-muted)" }} />
+              </Link>
+            ))}
           </div>
         </Card>
 
         <Card>
-          <h2 className="font-semibold text-[var(--text-primary)] mb-3">Pendentes de aprovação</h2>
-          <div className="flex flex-col items-center justify-center py-6 text-center">
-            <div className="w-10 h-10 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center mb-2">
-              <CheckCircle className="w-5 h-5 text-[var(--text-muted)]" />
+          <h2 className="font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
+            Pendentes de aprovação
+          </h2>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
+              style={{ backgroundColor: "var(--bg-tertiary)" }}
+            >
+              <CheckCircle className="w-6 h-6" style={{ color: "var(--text-muted)" }} />
             </div>
-            <p className="text-sm text-[var(--text-muted)]">Nenhum post pendente</p>
+            <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+              Nenhum post pendente
+            </p>
+            <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+              Tudo aprovado por enquanto
+            </p>
           </div>
         </Card>
       </div>

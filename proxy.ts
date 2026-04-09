@@ -19,24 +19,21 @@ async function isAuthenticated(req: NextRequest): Promise<boolean> {
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-
   const authed = await isAuthenticated(req);
 
-  // Logado tentando acessar /login → dashboard
-  if (pathname === "/login" && authed) {
+  // Logado acessando /login ou / → vai pro dashboard
+  if ((pathname === "/login" || pathname === "/") && authed) {
     return NextResponse.redirect(new URL("/admin", req.url));
   }
 
-  // Rota protegida sem auth → 404
-  if (pathname.startsWith("/admin")) {
-    if (!authed) {
-      return NextResponse.rewrite(new URL("/not-found", req.url), { status: 404 });
-    }
+  // Rota admin sem auth → redireciona para login
+  if (pathname.startsWith("/admin") && !authed) {
+    return NextResponse.redirect(new URL("/login", req.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/login"],
+  matcher: ["/", "/admin/:path*", "/login"],
 };
