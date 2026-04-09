@@ -1,4 +1,6 @@
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ApproveClient } from "./approve-client";
+import { notFound } from "next/navigation";
 
 export default async function ApprovePage({
   params,
@@ -6,36 +8,64 @@ export default async function ApprovePage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
+  const supabase = createAdminClient();
 
-  // TODO: fetch posts by token from Supabase
-  const mockPosts = [
-    {
-      id: "1",
-      date: "2024-04-15",
-      theme: "Promoção de Páscoa",
-      description:
-        "Celebre a Páscoa com a gente! Produtos especiais com até 30% de desconto. Aproveite essa oportunidade única para presentear quem você ama.",
-      hashtags: "#pascoa #promocao #desconto",
-      media_url: "https://drive.google.com",
-      docs_url: null,
-      status: "pending" as const,
-      client_id: "1",
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: "2",
-      date: "2024-04-18",
-      theme: "Lançamento novo produto",
-      description:
-        "Novidade chegando! Conheça nossa mais nova linha de produtos, desenvolvida especialmente para você.",
-      hashtags: "#novidade #lancamento #produto",
-      media_url: "https://drive.google.com",
-      docs_url: null,
-      status: "pending" as const,
-      client_id: "1",
-      created_at: new Date().toISOString(),
-    },
-  ];
+  // Valida o token
+  const { data: approvalToken } = await supabase
+    .from("approval_tokens")
+    .select("client_id, used, expires_at")
+    .eq("token", token)
+    .single();
 
-  return <ApproveClient token={token} posts={mockPosts} clientName="Cliente" />;
+  if (
+    !approvalToken ||
+    approvalToken.used ||
+    new Date(approvalToken.expires_at) < new Date()
+  ) {
+    notFound();
+  }
+
+  const clientId = approvalToken.client_id;
+
+  // Busca cliente
+  const { data: client } = await supabase
+    .from("clients")
+    .select("id, name")
+    .eq("id", clientId)
+    .single();
+
+  if (!client) notFound();
+
+  // Busca posts pendentes do cliente
+  const { data: posts } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("client_id", clientId)
+    .eq("status", "pending")
+    .order("date", { ascending: true });
+
+  if (!posts?.length) {
+    return (
+      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center px-4">
+        <div className="text-center max-w-sm">
+          <p className="text-2xl mb-2">✅</p>
+          <h1 className="text-xl font-bold text-[var(--text-primary)]">
+            Tudo aprovado!
+          </h1>
+          <p className="text-sm text-[var(--text-secondary)] mt-2">
+            Não há conteúdos pendentes de aprovação no momento.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <ApproveClient
+      token={token}
+      clientId={clientId}
+      posts={posts}
+      clientName={client.name}
+    />
+  );
 }

@@ -21,33 +21,49 @@ type ApprovalState = "idle" | "awaiting_code" | "confirmed";
 
 interface Props {
   token: string;
+  clientId: string;
   posts: Post[];
   clientName: string;
 }
 
-export function ApproveClient({ token, posts, clientName }: Props) {
+export function ApproveClient({ token, clientId, posts, clientName }: Props) {
   const [decisions, setDecisions] = useState<Record<string, "approved" | "rejected">>({});
   const [expanded, setExpanded] = useState<string | null>(posts[0]?.id ?? null);
   const [state, setState] = useState<ApprovalState>("idle");
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const allDecided = posts.every((p) => decisions[p.id]);
 
   function decide(postId: string, decision: "approved" | "rejected") {
     setDecisions((d) => ({ ...d, [postId]: decision }));
-    // Auto-expand next undecided
     const nextUndecided = posts.find((p) => !decisions[p.id] && p.id !== postId);
     if (nextUndecided) setExpanded(nextUndecided.id);
   }
 
   async function handleSendCode() {
     setLoading(true);
-    // TODO: call /api/send-code
-    await new Promise((r) => setTimeout(r, 1000));
-    setState("awaiting_code");
-    setLoading(false);
+    setError("");
+    try {
+      const res = await fetch("/api/send-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ client_id: clientId }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Erro ao enviar código");
+      }
+
+      setState("awaiting_code");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Erro ao enviar código");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleVerifyCode() {
@@ -55,12 +71,38 @@ export function ApproveClient({ token, posts, clientName }: Props) {
       setCodeError("Digite os 6 dígitos");
       return;
     }
+
     setLoading(true);
     setCodeError("");
-    // TODO: call /api/verify-code
-    await new Promise((r) => setTimeout(r, 1000));
-    setState("confirmed");
-    setLoading(false);
+    setError("");
+
+    try {
+      const decisionsArr = Object.entries(decisions).map(([post_id, status]) => ({
+        post_id,
+        status,
+      }));
+
+      const res = await fetch("/api/verify-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: clientId,
+          code,
+          decisions: decisionsArr,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Código inválido");
+      }
+
+      setState("confirmed");
+    } catch (e: unknown) {
+      setCodeError(e instanceof Error ? e.message : "Código inválido ou expirado");
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (state === "confirmed") {
@@ -70,7 +112,9 @@ export function ApproveClient({ token, posts, clientName }: Props) {
           <div className="w-16 h-16 rounded-full bg-green-500/15 flex items-center justify-center mx-auto mb-4">
             <Check className="w-8 h-8 text-green-400" />
           </div>
-          <h1 className="text-xl font-bold text-[var(--text-primary)]">Aprovação confirmada!</h1>
+          <h1 className="text-xl font-bold text-[var(--text-primary)]">
+            Aprovação confirmada!
+          </h1>
           <p className="text-sm text-[var(--text-secondary)] mt-2">
             Suas escolhas foram registradas com sucesso. Obrigado!
           </p>
@@ -88,7 +132,9 @@ export function ApproveClient({ token, posts, clientName }: Props) {
             <div className="w-7 h-7 bg-[#6366F1] rounded-[8px] flex items-center justify-center">
               <Zap className="w-4 h-4 text-white" fill="white" />
             </div>
-            <span className="font-bold text-[15px] text-[var(--text-primary)]">AprovaZap</span>
+            <span className="font-bold text-[15px] text-[var(--text-primary)]">
+              AprovaZap
+            </span>
           </div>
           <ThemeToggle />
         </div>
@@ -97,7 +143,9 @@ export function ApproveClient({ token, posts, clientName }: Props) {
       <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
         {/* Welcome */}
         <div className="mb-2">
-          <h1 className="text-xl font-bold text-[var(--text-primary)]">Olá, {clientName}!</h1>
+          <h1 className="text-xl font-bold text-[var(--text-primary)]">
+            Olá, {clientName}!
+          </h1>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
             Revise e aprove os conteúdos abaixo.
           </p>
@@ -119,7 +167,6 @@ export function ApproveClient({ token, posts, clientName }: Props) {
                   : "border-[var(--border-color)] bg-[var(--bg-secondary)]"
               }`}
             >
-              {/* Post header */}
               <button
                 onClick={() => setExpanded(isExpanded ? null : post.id)}
                 className="w-full flex items-center justify-between p-4 text-left"
@@ -132,13 +179,13 @@ export function ApproveClient({ token, posts, clientName }: Props) {
                     <p className="font-semibold text-[var(--text-primary)] text-sm truncate">
                       {post.theme}
                     </p>
-                    <p className="text-xs text-[var(--text-secondary)]">{formatDate(post.date)}</p>
+                    <p className="text-xs text-[var(--text-secondary)]">
+                      {formatDate(post.date)}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                  {decision && (
-                    <StatusBadge status={decision} />
-                  )}
+                  {decision && <StatusBadge status={decision} />}
                   {isExpanded ? (
                     <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" />
                   ) : (
@@ -147,14 +194,11 @@ export function ApproveClient({ token, posts, clientName }: Props) {
                 </div>
               </button>
 
-              {/* Post details */}
               {isExpanded && (
                 <div className="px-4 pb-4 space-y-4 border-t border-[var(--border-color)]">
-                  <div className="pt-4">
-                    <p className="text-sm text-[var(--text-primary)] leading-relaxed">
-                      {post.description}
-                    </p>
-                  </div>
+                  <p className="text-sm text-[var(--text-primary)] leading-relaxed pt-4">
+                    {post.description}
+                  </p>
 
                   {post.hashtags && (
                     <div className="flex items-start gap-2">
@@ -163,7 +207,7 @@ export function ApproveClient({ token, posts, clientName }: Props) {
                     </div>
                   )}
 
-                  <div className="flex gap-2">
+                  <div className="flex gap-4">
                     {post.media_url && (
                       <a
                         href={post.media_url}
@@ -188,7 +232,6 @@ export function ApproveClient({ token, posts, clientName }: Props) {
                     )}
                   </div>
 
-                  {/* Action buttons */}
                   {!decision && (
                     <div className="grid grid-cols-2 gap-3 pt-2">
                       <Button
@@ -214,7 +257,13 @@ export function ApproveClient({ token, posts, clientName }: Props) {
 
                   {decision && (
                     <button
-                      onClick={() => setDecisions((d) => { const n = {...d}; delete n[post.id]; return n; })}
+                      onClick={() =>
+                        setDecisions((d) => {
+                          const n = { ...d };
+                          delete n[post.id];
+                          return n;
+                        })
+                      }
                       className="text-xs text-[var(--text-muted)] underline underline-offset-2"
                     >
                       Desfazer decisão
@@ -226,12 +275,14 @@ export function ApproveClient({ token, posts, clientName }: Props) {
           );
         })}
 
-        {/* Progress */}
+        {/* Progress bar */}
         <div className="flex items-center gap-2 py-2">
           <div className="flex-1 h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
             <div
               className="h-full bg-[#6366F1] rounded-full transition-all duration-500"
-              style={{ width: `${(Object.keys(decisions).length / posts.length) * 100}%` }}
+              style={{
+                width: `${(Object.keys(decisions).length / posts.length) * 100}%`,
+              }}
             />
           </div>
           <span className="text-xs text-[var(--text-muted)] flex-shrink-0">
@@ -239,17 +290,25 @@ export function ApproveClient({ token, posts, clientName }: Props) {
           </span>
         </div>
 
-        {/* Confirm section */}
+        {/* Error global */}
+        {error && (
+          <p className="text-sm text-red-400 text-center">{error}</p>
+        )}
+
+        {/* CTA: confirmar */}
         {state === "idle" && allDecided && (
           <Button size="lg" onClick={handleSendCode} loading={loading}>
             Confirmar aprovações
           </Button>
         )}
 
+        {/* Código WhatsApp */}
         {state === "awaiting_code" && (
           <div className="space-y-4 p-5 rounded-[16px] bg-[var(--bg-secondary)] border border-[var(--border-color)]">
             <div>
-              <p className="font-semibold text-[var(--text-primary)]">Digite o código</p>
+              <p className="font-semibold text-[var(--text-primary)]">
+                Digite o código
+              </p>
               <p className="text-sm text-[var(--text-secondary)] mt-1">
                 Enviamos um código de 6 dígitos para o seu WhatsApp.
               </p>
@@ -267,6 +326,13 @@ export function ApproveClient({ token, posts, clientName }: Props) {
             <Button size="lg" onClick={handleVerifyCode} loading={loading}>
               Verificar código
             </Button>
+            <button
+              onClick={handleSendCode}
+              disabled={loading}
+              className="w-full text-xs text-[var(--text-muted)] underline underline-offset-2 disabled:opacity-40"
+            >
+              Reenviar código
+            </button>
           </div>
         )}
       </div>
